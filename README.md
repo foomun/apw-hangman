@@ -1,12 +1,11 @@
 # Hangman Project
 
-## Rowan University
+> Rowan University
+  Advanced Programming Workshop: JavaScript
 
-Advanced Programming Workshop: JavaScript
+## Authors
 
-### Authors
-
-Phuc Tran (Tim)
-Kate Erkan
-Ryan McConnell
+Phuc Tran (Tim)  
+Kate Erkan  
+Ryan McConnell  
 
