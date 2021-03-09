@@ -1,7 +1,7 @@
 # Hangman Project
 
-> Rowan University
-  Advanced Programming Workshop: JavaScript
+> Rowan University 
+  \``Advanced Programming Workshop: JavaScript`\`
 
 ## Authors
 
