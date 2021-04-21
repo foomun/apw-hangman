@@ -1,0 +1,15 @@
+extends layout 
+block content 
+    body
+        h2 Check the Leaderboards!
+
+        h3 Sort by:
+        form(method="post")
+            select(name="prop")
+                option(value="Highest Wins") win_counter
+                option(value="Biggest Losers") loss_counter 
+                option(value="Fastest Time") best_time 
+            br
+            input(type="submit" value="Sort!")
+
+            //finish leaderboard sort functions/queries

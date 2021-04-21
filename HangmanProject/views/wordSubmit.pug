@@ -1,0 +1,16 @@
+extends layout 
+
+block content 
+    body
+        h2 Feel Free to Submit a Word
+
+        form(method="POST")
+            p 
+                |Word: 
+                input(name="word" value='')
+                br
+                |Hint for Your Word: 
+                input(name="hint" value='')
+                br
+                input(type="submit" value="Send!")
+                input(type="reset" value="Clear!")
