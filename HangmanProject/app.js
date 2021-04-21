@@ -2,7 +2,7 @@
 Ryan McConnell
 April 2021*/
 
-//INSERT var for userstats!!! <- Hello future me look here
+var user = require('./userStats');
 var http = require("http");
 var qString = require("querystring");
 var path = require("path");
@@ -53,12 +53,18 @@ app.use(express.static(path.join(__dirname, 'public'))); //join path of dir to p
 
 //GET ROUTES
 app.get('/', function (req, res){
-    res.end('<html><body><br><br><a href="/wordSubmit">Word Submission</a>&emsp;&emsp;\
-    <a href="/hintSubmit">Hint Submission</a>&emsp;&emsp;\
-    <a href="/leaderboard">Leaderboards</a></body></html>');
+    res.end('<html><body><br><br><a href="/wordSubmit">   Word Submission   </a>&emsp;&emsp;\
+    <a href="/hintSubmit">   Hint Submission   </a>&emsp;&emsp;\
+    <a href="/leaderboard">   Leaderboards   </a></body></html>');
 }); 
 app.get('/wordSubmit', function(req, res, next){
     res.render('wordSubmit');
+});
+app.get('/hintSubmit', function(req, res, next){
+    res.render('hintSubmit');
+});
+app.get('/leaderboard', function(req, res, next){
+    res.render('leaderboard');
 });
 
 //POST ROUTES
@@ -84,4 +90,5 @@ app.listen(7000, async()=>{
     } catch(e){
         console.log(e.message);
     }
+    console.log("Server is running...");
 } );
