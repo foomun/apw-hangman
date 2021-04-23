@@ -6,29 +6,52 @@ var user = require('./userStats');
 var http = require("http");
 var qString = require("querystring");
 var path = require("path");
+//var random = require('random');
+var Math = require('mathjs');
 let dbManager = require('./dbManager');
 let express = require("express");
 let app = express();
 var ObjectID = require('mongodb').ObjectId;
+var userRoute = require('./routes/userRoute.js')
+//mongoose model stuff
+let mongoose = require('mongoose');
+mongoose.set('bufferCommands', false);
 //potential routes??
+
+//login stuff
+let session = require('express-session');
+let crypto = require('crypto');
+const users = require('./models/userSchema.js');
+const User = require('./userStats');
+
+//function for hashing passwords
+function genHash(input){
+    return Buffer.from(crypto.createHash('sha256').update(input).digest('base32')).toString('hex').toUpperCase();
+}
+
+//random function 
+function getRand(){
+    var rand = Math.floor((Math.random() * 10000) + 1);
+    return rand;
+}
 
 //DOCIFY FUNCTIONS
 //docify function for word submission
 //UNFINISHED. Add random var for hintlist and var for current user
-function docifyWord(params){
-    let doc = { word: params.word.toString().toLowerCase(), hintList: [], submittedBy: user }
+function docifyWord(params, hintID){
+    let doc = { word: params.word.toString().toLowerCase(), hintList: [hintID], submittedBy: user }
     return doc;
 };
-//docify function for new user info
-//UNFINISHED. Update whenever learn about login page handling/ password encryption
+//docify function for new user info.
 function docifyUser(params){
-    let doc = { username: params.username.toString(), password: "", best_time: 0, win_counter: 0, loss_counter: 0}
+    let doc = new users({ _id: params.userName, password: genHash(params.pass), 
+        best_time: 0, win_counter: 0, loss_counter: 0})
     return doc;
 };
 //docify function for hint submission
 //UNFINSHED. Add random var for hint id and var for current user
-function docifyHint(params){
-    let doc = { hint: params.hint.toString(), hint_id: "", submittedBy: user};
+function docifyHint(params, hintID){
+    let doc = { hint: params.hint.toString(), hint_id: hintID, submittedBy: user};
     return doc;
 };
 
@@ -50,35 +73,134 @@ function moveOn(postData){
 app.set('views', './views');
 app.set('view engine', 'pug');
 app.use(express.static(path.join(__dirname, 'public'))); //join path of dir to public folder
+app.use('/user', userRoute);
+app.use(session({
+    secret: 'titan',
+    saveUninitialized: false,
+    resave: false
+}))
 
 //GET ROUTES
 app.get('/', function (req, res){
-    res.end('<html><body><br><br><a href="/wordSubmit">   Word Submission   </a>&emsp;&emsp;\
-    <a href="/hintSubmit">   Hint Submission   </a>&emsp;&emsp;\
-    <a href="/leaderboard">   Leaderboards   </a></body></html>');
+    if(!req.session.user){
+		res.redirect('/login');
+	} else{
+        res.end('<html><body><br><br><a href="/createUser">   New User   </a>&emsp;&emsp;\
+        <a href="/wordSubmit">   Word Submission   </a>&emsp;&emsp;\
+        <a href="/hintSubmit">   Hint Submission   </a>&emsp;&emsp;\
+        <a href="/leaderboard">   Leaderboards   </a></body></html>');
+    }
 }); 
+app.get('/login', function(req, res, next){
+	if(req.session.user){
+		res.redirect('/');
+	} else{
+		res.render('login');
+	}
+});
+app.get('/createUser', function(req, res, next){
+    res.render('createUser');
+})
 app.get('/wordSubmit', function(req, res, next){
-    res.render('wordSubmit');
+    if(!req.session.user){
+		res.redirect('/login');
+	} else{
+        res.render('wordSubmit');
+    }
 });
 app.get('/hintSubmit', function(req, res, next){
-    res.render('hintSubmit');
+    if(!req.session.user){
+		res.redirect('/login');
+	} else{
+        res.render('hintSubmit');
+    }
 });
 app.get('/leaderboard', function(req, res, next){
-    res.render('leaderboard');
+    if(!req.session.user){
+		res.redirect('/login');
+	} else{
+        res.render('leaderboard');
+    }
 });
+//Insert leaderboard sort GETs here
 
 //POST ROUTES
 var postData;
+app.post('/login', express.urlencoded({extended: false}), async (req, res, next)=>{
+	let untrusted = {user: req.body.userName, password: genHash(req.body.pass)}
+	    try{
+		    let result = await users.findOne({_id: req.body.userName})
+            console.log(result); //just to make sure things are working
+            console.log(untrusted)//yep it works
+		    if (untrusted.password.toString().toLowerCase() == result.password.toString().toLowerCase()){
+			    let trusted={name: result._id.toString()}
+			    req.session.user=trusted;
+			    res.redirect('/')
+		    }else{
+			    res.render('login', {msg: "Password does not match records!"})
+		    }
+	    }catch (err){
+		    next(err)
+	    }
+})
+app.post('/createUser', function(req, res){
+    postData = '';
+    req.on('data', (data) =>{
+	postData+=data;
+    });
+    req.on('end', async ()=>{
+	    postParams = qString.parse(postData)
+        try{
+            //console.log(postParams.userName);
+            //console.log(postParams.pass); <-used to make sure it caught the right values
+            let curDoc = docifyUser(postParams);
+            await curDoc.save();
+            console.log("Added " + postParams.userName + " to db");
+            //below checks if there are now present in db and proceeds to log them in
+            let result = await users.findOne({_id: postParams.userName})
+            console.log(result);
+            let trusted={name: result._id.toString()};
+            req.session.user=trusted;
+            res.redirect('/')
+        }catch (err){
+            res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+        }
+    })
+})
 app.post('/wordSubmit', function(req, res){
     postData = '';
     req.on('data', (data) =>{
         postData+=data;
     });
-    try{
-        
-    } catch (err){
-        res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
-    }
+    req.on('end', async()=>{
+        try{
+            //insert functionality when word/hint functions are made
+        } catch (err){
+            res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+        }
+    })
+})
+app.post('/hintSubmit', function(req, res){
+    postData = '';
+    req.on('data', (data) =>{
+        postData+=data;
+    });
+    req.on('end', async()=>{
+        try{
+            //insert functionality when word/hint functions are made
+        } catch (err){
+            res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+        }
+    })
+})
+
+//error stuff
+app.use('*', function(req, res){
+    res.writeHead(404);
+    res.end(`<h1> ERROR 404. ${req.url} NOT FOUND</h1><br><br>`);
+});
+app.use((err, req, res, next)=>{
+	res.status(500).render('error', {message: err.message})
 })
 
 //Express listen function
@@ -86,7 +208,8 @@ app.listen(7000, async()=>{
     //try to start and wait for database
     //HangmanDB contains users, words, and hints collections
     try{
-        await dbManager.get("HangmanDB")
+        await mongoose.connect('mongodb://localhost:27017/HangmanDB', {useNewUrlParser: true, useUnifiedTopology: true });
+        //await dbManager.get("HangmanDB")
     } catch(e){
         console.log(e.message);
     }
