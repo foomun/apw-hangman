@@ -8,8 +8,6 @@ run 'npm install express-session'
 run 'npm install mathjs'
 run 'npm install mongoose'
 
-run 'npm install random' <- unsure if needed yet
-
 run git clone https://github.com/foomun/apw-hangman and then
       mongorestore --nsInclude=HangmanDB for db access
 
