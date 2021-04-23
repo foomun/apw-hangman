@@ -85,8 +85,8 @@ app.get('/', function (req, res){
     if(!req.session.user){
 		res.redirect('/login');
 	} else{
-        res.end('<html><body><br><br><a href="/createUser">   New User   </a>&emsp;&emsp;\
-        <a href="/wordSubmit">   Word Submission   </a>&emsp;&emsp;\
+        //console.log(req.session.user); <- does return logged in user's name. Implement into web pages if time allows
+        res.end('<html><body><br><br><a href="/wordSubmit">   Word Submission   </a>&emsp;&emsp;\
         <a href="/hintSubmit">   Hint Submission   </a>&emsp;&emsp;\
         <a href="/leaderboard">   Leaderboards   </a></body></html>');
     }
@@ -99,7 +99,12 @@ app.get('/login', function(req, res, next){
 	}
 });
 app.get('/createUser', function(req, res, next){
-    res.render('createUser');
+    if(req.session.user){
+        res.redirect('/');
+    }else{
+        res.render('createUser');
+    }
+    
 })
 app.get('/wordSubmit', function(req, res, next){
     if(!req.session.user){
@@ -156,7 +161,7 @@ app.post('/createUser', function(req, res){
             let curDoc = docifyUser(postParams);
             await curDoc.save();
             console.log("Added " + postParams.userName + " to db");
-            //below checks if there are now present in db and proceeds to log them in
+            //below checks if they are now present in db and proceeds to log them in
             let result = await users.findOne({_id: postParams.userName})
             console.log(result);
             let trusted={name: result._id.toString()};
