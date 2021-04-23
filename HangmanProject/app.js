@@ -2,7 +2,6 @@
 Ryan McConnell
 April 2021*/
 
-var user = require('./userStats');
 var http = require("http");
 var qString = require("querystring");
 var path = require("path");
@@ -22,7 +21,6 @@ mongoose.set('bufferCommands', false);
 let session = require('express-session');
 let crypto = require('crypto');
 const users = require('./models/userSchema.js');
-const User = require('./userStats');
 
 //function for hashing passwords
 function genHash(input){
@@ -35,11 +33,29 @@ function getRand(){
     return rand;
 }
 
+//FUNCTIONS TO UPDATE DB IF SOMEONE IS LOGGED IN
+//function to increment win or loss counter for current user at end of game
+var endgameStatus = true;
+function updateCounter(curUser, endgameStatus){
+    if (endgameStatus){ //if endgame status is true, they win
+        users.findOneAndUpdate({_id: curUser }, {$inc: { win_counter : 1}})
+    }else{ //if false then they lost
+        users.findOneAndUpdate({_id: curUser }, {$inc: { loss_counter : 1}})
+    }
+}
+//function to update best_time for logged in user
+function updateTime(curBest, timeTest){
+    //get best time from user db and convert to seconds
+    //then compare to time from the game they just finished
+    //if timeTest < curBest, make timeTest the new best time for user
+}
+
 //DOCIFY FUNCTIONS
 //docify function for word submission
 //UNFINISHED. Add random var for hintlist and var for current user
+//user var should be req.session.user
 function docifyWord(params, hintID){
-    let doc = { word: params.word.toString().toLowerCase(), hintList: [hintID], submittedBy: user }
+    let doc = { word: params.word.toString().toLowerCase(), hintList: [hintID], submittedBy: '' }
     return doc;
 };
 //docify function for new user info.
@@ -50,8 +66,9 @@ function docifyUser(params){
 };
 //docify function for hint submission
 //UNFINSHED. Add random var for hint id and var for current user
+//user var should be req.session.user
 function docifyHint(params, hintID){
-    let doc = { hint: params.hint.toString(), hint_id: hintID, submittedBy: user};
+    let doc = { hint: params.hint.toString(), hint_id: hintID, submittedBy: ''};
     return doc;
 };
 
