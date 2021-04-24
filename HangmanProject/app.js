@@ -21,6 +21,8 @@ mongoose.set('bufferCommands', false);
 let session = require('express-session');
 let crypto = require('crypto');
 const users = require('./models/userSchema.js');
+const hints = require('./models/hintSchema.js');
+const words = require('./models/wordSchema.js');
 
 //function for hashing passwords
 function genHash(input){
@@ -44,10 +46,14 @@ function updateCounter(curUser, endgameStatus){
     }
 }
 //function to update best_time for logged in user
-function updateTime(curBest, timeTest){
+function updateTime(curUser, timeTest){
     //get best time from user db and convert to seconds
     //then compare to time from the game they just finished
-    //if timeTest < curBest, make timeTest the new best time for user
+    //if timeTest < current best_time, make timeTest the new best time for user
+    let result = users.findOne({_id : curUser});
+    if (timeTest < result.best_time){
+        users.findOneAndUpdate({_id: curUser}, {best_time : timeTest})
+    }
 }
 
 //DOCIFY FUNCTIONS
@@ -60,8 +66,7 @@ function docifyWord(params, hintID){
 };
 //docify function for new user info.
 function docifyUser(params){
-    let doc = new users({ _id: params.userName, password: genHash(params.pass), 
-        best_time: 0, win_counter: 0, loss_counter: 0})
+    let doc = new users({ _id: params.userName, password: genHash(params.pass)})
     return doc;
 };
 //docify function for hint submission
@@ -105,7 +110,8 @@ app.get('/', function (req, res){
         //console.log(req.session.user); <- does return logged in user's name. Implement into web pages if time allows
         res.end('<html><body><br><br><a href="/wordSubmit">   Word Submission   </a>&emsp;&emsp;\
         <a href="/hintSubmit">   Hint Submission   </a>&emsp;&emsp;\
-        <a href="/leaderboard">   Leaderboards   </a></body></html>');
+        <a href="/leaderboard">   Leaderboards   </a>&emsp;&emsp;\
+        <a href="/logout">   Log out   </a></body></html>');
     }
 }); 
 app.get('/login', function(req, res, next){
@@ -115,6 +121,14 @@ app.get('/login', function(req, res, next){
 		res.render('login');
 	}
 });
+app.get('/logout', function(req, res){
+    if(req.session.user){
+        req.session.destroy();
+        res.render('login', {msg: "Successfully logged out! Bye-bye~"})
+    } else{
+        res.render('login', {msg: "You got to log in to log out"})
+    }
+})
 app.get('/createUser', function(req, res, next){
     if(req.session.user){
         res.redirect('/');
@@ -144,7 +158,6 @@ app.get('/leaderboard', function(req, res, next){
         res.render('leaderboard');
     }
 });
-//Insert leaderboard sort GETs here
 
 //POST ROUTES
 var postData;
@@ -212,6 +225,54 @@ app.post('/hintSubmit', function(req, res){
             //insert functionality when word/hint functions are made
         } catch (err){
             res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+        }
+    })
+})
+//Insert leaderboard sort POST here. UPDATE: Yay its done
+app.post('/leaderboard', function(req, res){
+    postData = '';
+    req.on('data', (data)=>{
+        postData+=data;
+    });
+    req.on('end', async() =>{
+        console.log(postData)
+        if(moveOn(postData)){
+            var prop = postParams.prop;
+            //console.log(prop);//<- returns prop correctly
+            try{
+                var cursor;
+                //sort top 5 of whatever value
+                if(prop == "win_counter"){
+                    cursor = await users.find({}).sort({win_counter: -1}).limit(5);
+                    //console.log(cursor);
+                } else if(prop == "loss_counter"){
+                    cursor = await users.find({}).sort({loss_counter: -1}).limit(5);
+                    //console.log(cursor);
+                }
+                //since its by lowest times, sort is ascending
+                else if(prop == "best_time"){
+                    cursor = await users.find({}).sort({best_time: 1}).limit(5);
+                    //console.log(cursor);
+                }
+                let data = [];
+                await cursor.forEach((item) => {
+                    let curInfo={};
+                    curInfo._id = item._id;
+                    curInfo.best_time = item.best_time;
+                    curInfo.win_counter = item.win_counter;
+                    curInfo.loss_counter = item.loss_counter;
+                    data.push(curInfo);
+                    //console.log(curInfo);
+                    console.log(data)
+                });
+                let result = {dataArr: data, prop: prop};
+                //console.log(result)
+                res.render('leaderboard', {results: result});
+            }catch(err){
+                res.status(500).render('error', {message: err.message})
+            }
+        }else{
+            res.render('leaderboard');
         }
     })
 })

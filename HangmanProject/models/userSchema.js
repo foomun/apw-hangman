@@ -9,9 +9,19 @@ const userSchema = new mongoose.Schema({
         type: String,
         required: [true, 'Do you want people to steal your identity?']
     },
-    best_time: Number,
-    win_counter: Number,
-    loss_counter: Number
+    best_time: {
+        type: Number,
+        default: 86400 //if someone takes more than a day, 
+                       //I have nothing to say besides, "oof"
+    },
+    win_counter: {
+        type: Number,
+        default: 0
+    },
+    loss_counter: {
+        type: Number,
+        default: 0
+    }
 });
 const users=mongoose.model('User', userSchema, 'user');
 //Hi! if you are reading this, let it be known I went insane for an hour wondering why I
