@@ -5,7 +5,6 @@ April 2021*/
 var http = require("http");
 var qString = require("querystring");
 var path = require("path");
-//var random = require('random');
 var Math = require('mathjs');
 let dbManager = require('./dbManager');
 let express = require("express");
@@ -46,6 +45,7 @@ function updateCounter(curUser, endgameStatus){
     }
 }
 //function to update best_time for logged in user
+//FIND A WAY TO TRACK TIME DURING GAME!!!
 function updateTime(curUser, timeTest){
     //get best time from user db and convert to seconds
     //then compare to time from the game they just finished
@@ -60,8 +60,9 @@ function updateTime(curUser, timeTest){
 //docify function for word submission
 //UNFINISHED. Add random var for hintlist and var for current user
 //user var should be req.session.user
-function docifyWord(params, hintID){
-    let doc = { word: params.word.toString().toLowerCase(), hintList: [hintID], submittedBy: '' }
+function docifyWord(inputWord, hintID, user){
+    let doc = new words({ _id: inputWord.toLowerCase(),
+         hintList: [hintID], submittedBy: user });
     return doc;
 };
 //docify function for new user info.
@@ -72,8 +73,9 @@ function docifyUser(params){
 //docify function for hint submission
 //UNFINSHED. Add random var for hint id and var for current user
 //user var should be req.session.user
-function docifyHint(params, hintID){
-    let doc = { hint: params.hint.toString(), hint_id: hintID, submittedBy: ''};
+function docifyHint(inputHint, hintID, user){
+    let doc = new hints({ _id: inputHint.toString(), hint_id: hintID,
+         submittedBy: user});
     return doc;
 };
 
@@ -161,6 +163,7 @@ app.get('/leaderboard', function(req, res, next){
 
 //POST ROUTES
 var postData;
+var user;
 app.post('/login', express.urlencoded({extended: false}), async (req, res, next)=>{
 	let untrusted = {user: req.body.userName, password: genHash(req.body.pass)}
 	    try{
@@ -203,29 +206,132 @@ app.post('/createUser', function(req, res){
     })
 })
 app.post('/wordSubmit', function(req, res){
+    user = req.session.user.name; //<- returns only name string of current user
+    //console.log(user);
     postData = '';
     req.on('data', (data) =>{
         postData+=data;
     });
     req.on('end', async()=>{
-        try{
-            //insert functionality when word/hint functions are made
-        } catch (err){
-            res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+        console.log(postData);
+        if(moveOn(postData)){
+            try{
+                var wordInput = postParams.word.toLowerCase();
+                var hintInput = postParams.hint;
+                console.log(wordInput);
+                console.log(hintInput);
+                var hintID = getRand();
+                var wordCheck = await words.find({_id : wordInput}).countDocuments()
+                var hintIDCheck = await hints.find({hint_id : hintID}).countDocuments()
+                var hintCheck = await hints.find({_id : hintInput}).countDocuments()
+                //check if input word already exists
+                if(wordCheck > 0){
+                    console.log("User tried to submit a word that already exists!")
+                    res.render('wordSubmit', {msg: "That word already exists!"})
+                }else if(wordCheck == 0 && hintCheck > 0){ 
+                    //if word doesn't exist and hint exists, add hint to newly added word
+                    var cursor = await hints.find({_id: hintInput});
+                    var existHintID;
+                    var existHint;
+                    await cursor.forEach((item)=>{
+                        existHintID = item.hint_id;
+                        existHint = item._id;
+                    })
+                    let wordDoc = docifyWord(wordInput, existHintID, user);
+                    await wordDoc.save();
+                    res.render('wordSubmit', {msg: "Your word: " + wordInput + 
+                    " and existing hint: " + existHint + " has been added"});
+                }else{
+                    //if hint_id exists, keep regening an id for hint to be added
+                    while(hintIDCheck > 0){ 
+                        hintID = getRand();
+                        hintIDCheck = await hints.find({hint_id : hintID}).countDocuments()
+                    }
+                    let wordDoc = docifyWord(wordInput, hintID, user);
+                    let hintDoc = docifyHint(hintInput, hintID, user);
+                    await wordDoc.save();
+                    await hintDoc.save();
+                    res.render('wordSubmit', {msg: "Your word: " + wordInput + 
+                    " and hint: " + hintInput + " has been added"});
+                }
+            } catch (err){
+                res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+            }
+        }else{
+            res.render('wordSubmit');
         }
     })
 })
 app.post('/hintSubmit', function(req, res){
+    user = req.session.user.name; //<- returns only name string of current user
+    console.log(user);
     postData = '';
     req.on('data', (data) =>{
         postData+=data;
     });
     req.on('end', async()=>{
-        try{
-            //insert functionality when word/hint functions are made
-        } catch (err){
-            res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+        console.log(postData)
+        if(moveOn(postData)){
+            try{
+                var wordInput = postParams.word.toLowerCase();
+                var hintInput = postParams.hint;
+                console.log(wordInput);
+                console.log(hintInput);
+                var hintID = getRand();
+                var wordCheck = await words.find({_id : wordInput}).countDocuments()
+                var hintIDCheck = await hints.find({hint_id : hintID}).countDocuments()
+                var hintCheck = await hints.find({_id : hintInput}).countDocuments()
+                //make sure word exists in db
+                if(wordCheck > 0){
+                    console.log(wordInput + " exists in DB!")
+                    //Make sure not a duplicate hint
+                    if(hintCheck > 0){ //if hint exists, try to add to existing word
+                        //get hint_id for existing hint
+                        var cursor = await hints.find({_id: hintInput});
+                        var existHintID;
+                        var existHint;
+                        await cursor.forEach((item)=>{
+                            existHintID = item.hint_id;
+                            existHint = item._id;
+                        })
+                        //check if existing hint exists for given existing word
+                        var wordHasHint = await words.find({_id: wordInput, hintList: existHintID}).countDocuments()
+                        if(wordHasHint > 0){ //if hint is in word list
+                            console.log("The hint exists for that word already!");
+                            res.render('hintSubmit', {msg: "The existing hint: " + existHint + 
+                            " is already in " + wordInput + "'s list of hints!"})
+                        }else{
+                            //adds existing hint to existing word
+                            await words.updateOne({_id: wordInput}, { $push: {hintList: existHintID}});
+                            res.render('hintSubmit', {msg: "The existing hint: " + existHint + 
+                            " has been added to " + wordInput + "'s list of hints!" })
+                        }
+                    }else{//if not dupe hint, proceed to add
+                        //if hint_id exists, keep regening an id for hint to be added
+                        while(hintIDCheck > 0){ 
+                            hintID = getRand();
+                            hintIDCheck = await hints.find({hint_id : hintID}).countDocuments()
+                        }
+                        //adds hint to db
+                        let hintDoc = docifyHint(hintInput, hintID, user);
+                        await hintDoc.save();
+                        //assign new hint's id to existing word
+                        await words.updateOne({_id: wordInput}, { $push: {hintList: hintID}});
+                        res.render('hintSubmit', {msg: "Your hint: " + hintInput + 
+                            " has been added to " + wordInput + "'s list of hints!"});
+                    }
+                    
+                }else{
+                    res.render('hintSubmit', {msg: "The word " + wordInput +
+                    " does not exist! Try adding it?"});
+                }
+            } catch (err){
+                res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
+            }
+        }else{
+            res.render('hintSubmit');
         }
+        
     })
 })
 //Insert leaderboard sort POST here. UPDATE: Yay its done

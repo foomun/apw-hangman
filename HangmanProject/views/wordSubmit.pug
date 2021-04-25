@@ -14,6 +14,9 @@ block content
                 br
                 input(type="submit" value="Send!")
                 input(type="reset" value="Clear!")
+        if msg 
+            h3 #{msg}
+        br
             
 block append footer 
     a(href='/') Home 

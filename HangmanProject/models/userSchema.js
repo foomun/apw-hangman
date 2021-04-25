@@ -12,7 +12,7 @@ const userSchema = new mongoose.Schema({
     best_time: {
         type: Number,
         default: 86400 //if someone takes more than a day, 
-                       //I have nothing to say besides, "oof"
+                       //I have nothing to say besides, "oof" Oh it's in seconds btw
     },
     win_counter: {
         type: Number,

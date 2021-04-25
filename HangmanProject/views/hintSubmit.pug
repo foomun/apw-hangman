@@ -4,7 +4,7 @@ block content
     body
         h2 Feel Free to Submit a Hint For an Existing Word
 
-        form(method="PUT")
+        form(method="POST")
             p 
                 |Word: 
                 input(name="word" value='')
@@ -14,6 +14,9 @@ block content
                 br
                 input(type="submit" value="Send!")
                 input(type="reset" value="Clear!")
+        if msg 
+            h3 #{msg}
+        br
 
 block append footer 
     a(href='/') Home 
