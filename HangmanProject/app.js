@@ -58,7 +58,6 @@ function updateTime(curUser, timeTest){
 
 //DOCIFY FUNCTIONS
 //docify function for word submission
-//UNFINISHED. Add random var for hintlist and var for current user
 //user var should be req.session.user
 function docifyWord(inputWord, hintID, user){
     let doc = new words({ _id: inputWord.toLowerCase(),
@@ -71,7 +70,6 @@ function docifyUser(params){
     return doc;
 };
 //docify function for hint submission
-//UNFINSHED. Add random var for hint id and var for current user
 //user var should be req.session.user
 function docifyHint(inputHint, hintID, user){
     let doc = new hints({ _id: inputHint.toString(), hint_id: hintID,
