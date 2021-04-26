@@ -34,6 +34,17 @@ function getRand(){
     return rand;
 }
 
+//check if a word's hint list is full. Current check: hint list can't have more than 5
+async function isListAtMax(word){
+    var maxHints = false;
+    let cursor = await words.find({_id: word, hintList: {$size: 5}}).countDocuments();
+    //if the word's hint list is at max
+    if(cursor > 0){
+        maxHints = true;
+    }
+    return maxHints;
+}
+
 //FUNCTIONS TO UPDATE DB IF SOMEONE IS LOGGED IN
 //function to increment win or loss counter for current user at end of game
 var endgameStatus = true;
@@ -276,14 +287,20 @@ app.post('/hintSubmit', function(req, res){
                 console.log(wordInput);
                 console.log(hintInput);
                 var hintID = getRand();
+                var atMax = await isListAtMax(wordInput);
+                console.log("Does the word at max number of hints? " + atMax);
                 var wordCheck = await words.find({_id : wordInput}).countDocuments()
                 var hintIDCheck = await hints.find({hint_id : hintID}).countDocuments()
                 var hintCheck = await hints.find({_id : hintInput}).countDocuments()
                 //make sure word exists in db
-                if(wordCheck > 0){
+                if(wordCheck > 0 && !atMax){
                     console.log(wordInput + " exists in DB!")
+                    if(atMax){
+                        console.log(wordInput + " is at max hints. Sorry");
+                    }
                     //Make sure not a duplicate hint
-                    if(hintCheck > 0){ //if hint exists, try to add to existing word
+                    //if hint exists and word's list isn't full, try to add to existing word
+                    if(hintCheck > 0){ 
                         //get hint_id for existing hint
                         var cursor = await hints.find({_id: hintInput});
                         var existHintID;
@@ -320,8 +337,13 @@ app.post('/hintSubmit', function(req, res){
                     }
                     
                 }else{
-                    res.render('hintSubmit', {msg: "The word " + wordInput +
+                    if(atMax){
+                        res.render('hintSubmit', {msg: "The word " + wordInput +
+                    " has the maximum amount of hints. Not Adding."});
+                    }else{
+                        res.render('hintSubmit', {msg: "The word " + wordInput +
                     " does not exist! Try adding it?"});
+                    }
                 }
             } catch (err){
                 res.status(500).render('error', {message: `That ain't good... \n ${err.message}`})
