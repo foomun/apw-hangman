@@ -442,7 +442,7 @@ app.listen(7000, async()=>{
         console.log(e.message);
     }
     console.log("Server is running...");
-    console.log(randWord()); //<- test for randWord was working correctly 
-    console.log(randWord());
-    console.log(randWord());
+    //console.log(randWord()); //<- test for randWord was working correctly 
+    //console.log(randWord());
+    //console.log(randWord());
 } );
