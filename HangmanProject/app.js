@@ -45,6 +45,25 @@ async function isListAtMax(word){
     return maxHints;
 }
 
+//Grab 1 random word from word list
+async function randWord(){
+    let data=[];
+    try{
+        let cursor = await words.aggregate([{$match: {}}, {$sample: {size: 1}}])
+        await cursor.forEach((item)=>{
+            let wordInfo={};
+            wordInfo._id = item._id;
+            wordInfo.hintList = item.hintList;
+            wordInfo.submittedBy = item.submittedBy;
+            data.push(wordInfo);
+            console.log(data);
+        })
+    }catch(e){
+        console.log(e.message);
+    }
+    return data;
+}
+
 //FUNCTIONS TO UPDATE DB IF SOMEONE IS LOGGED IN
 //function to increment win or loss counter for current user at end of game
 var endgameStatus = true;
@@ -423,4 +442,5 @@ app.listen(7000, async()=>{
         console.log(e.message);
     }
     console.log("Server is running...");
+    console.log(randWord());
 } );
